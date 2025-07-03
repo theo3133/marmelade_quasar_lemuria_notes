@@ -1,0 +1,38 @@
+name: fetch_raw_to_git
+on:
+  schedule: [ { cron: "0 */2 * * *" } ]      # toutes les 2 h UTC
+  workflow_dispatch:                         # bouton “Run workflow”
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }             # on garde l’historique complet
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Générer snapshot JSON
+        run: |
+          ts=$(date -u +'%Y%m%dT%H%M')
+          mkdir -p buffer
+          python trading/fetch_to_daily_raw.py --output buffer/${ts}.json
+
+      - name: Commit & push sur la branche raw-feed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # token auto
+        run: |
+          git config user.name  "snapshot-bot"
+          git config user.email "snapshot@users.noreply.github.com"
+          git switch --create raw-feed || git switch raw-feed
+          mkdir -p snapshots
+          mv buffer/*.json snapshots/
+          git add snapshots/*.json
+          git commit -m "snapshot ${ts}"
+          git push origin raw-feed
