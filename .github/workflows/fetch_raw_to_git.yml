@@ -22,7 +22,7 @@ jobs:
         run: |
           ts=$(date -u +'%Y%m%dT%H%M')
           mkdir -p buffer
-          python trading/fetch_to_daily_raw.py --output buffer/${ts}.json
+          python fetch_to_daily_raw.py --output buffer/${ts}.json
 
       - name: Commit & push sur la branche raw-feed
         env:
