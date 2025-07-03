@@ -1,38 +1,57 @@
 name: fetch_raw_to_git
-on:
-  schedule: [ { cron: "0 */2 * * *" } ]      # toutes les 2 h UTC
-  workflow_dispatch:                         # bouton “Run workflow”
 
+# ───── Déclencheurs ────────────────────────────────────────────────────────────
+on:
+  push:                       # à chaque push sur main
+    branches: [ main ]
+  schedule:                   # toutes les 2 h (UTC)
+    - cron: "0 */2 * * *"
+  workflow_dispatch:          # bouton “Run workflow” dans l’UI
+
+# ───── Permissions ─────────────────────────────────────────────────────────────
+#  nécessaire pour pouvoir pousser sur le dépôt privé
+permissions:
+  contents: write
+
+# ───── Job principal ──────────────────────────────────────────────────────────
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Récupération du code
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }             # on garde l’historique complet
+        with:
+          fetch-depth: 0      # garde tout l’historique (utile pour git diff/purge)
 
+      # 2) Python + dépendances
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
 
-      - run: pip install -r requirements.txt
+      - name: Install requirements
+        run: pip install -r requirements.txt
 
+      # 3) Génération du snapshot JSON
       - name: Générer snapshot JSON
         run: |
           ts=$(date -u +'%Y%m%dT%H%M')
           mkdir -p buffer
           python fetch_to_daily_raw.py --output buffer/${ts}.json
 
+      # 4) Commit & push sur la branche raw-feed
       - name: Commit & push sur la branche raw-feed
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # token auto
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # token auto avec droits 'write'
         run: |
           git config user.name  "snapshot-bot"
           git config user.email "snapshot@users.noreply.github.com"
+
           git switch --create raw-feed || git switch raw-feed
           mkdir -p snapshots
           mv buffer/*.json snapshots/
+
           git add snapshots/*.json
           git commit -m "snapshot ${ts}"
           git push origin raw-feed
