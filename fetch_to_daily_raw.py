@@ -1,5 +1,5 @@
 # fetch_to_daily_raw.py
-import argparse, requests, time, datetime, json
+import argparse, requests, time, datetime, json, sys
 
 API_BASE = "https://api.guildwars2.com/v2"
 
