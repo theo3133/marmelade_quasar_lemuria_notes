@@ -10,6 +10,13 @@
 # ------------------------------------------------------------------
 
 import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+import os
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL n'est pas défini (ni dans .env, ni en variable d'environnement).")
 import requests                       # ← nouveau
 from sqlalchemy import select, func, case, BigInteger
 from models import Session, DailyRaw, Snapshot, Item

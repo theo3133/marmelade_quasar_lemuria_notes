@@ -8,6 +8,12 @@ Télécharge l’historique « daily » (API datawars2.ie) pour la fenêtre fixe
 ▸ 40 workers parallèles en continu (filaire) – affichage en flux
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+import os
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL n'est pas défini (ni dans .env, ni en variable d'environnement).")
+
 import aiohttp, asyncio, json
 from pathlib import Path
 from datetime import datetime, timedelta, timezone

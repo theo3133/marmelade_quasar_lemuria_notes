@@ -1,5 +1,11 @@
 # fetch_to_daily_raw.py
 import argparse, requests, time, datetime, json, sys
+from dotenv import load_dotenv
+
+load_dotenv()
+import os
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL n'est pas défini (ni dans .env, ni en variable d'environnement).")
 
 API_BASE = "https://api.guildwars2.com/v2"
 

@@ -8,10 +8,16 @@ avant le pull/rebase et restaurées ensuite.
 """
 
 import json, os, subprocess, pathlib, datetime
+from dotenv import load_dotenv
+
+# Charge les variables d'environnement (fichier .env éventuel)
+load_dotenv()
+import os
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL n'est pas défini (ni dans .env, ni en variable d'environnement).")
 from models import Session, DailyRaw      # modèles existants
 
 # ───────────── CONFIG ────────────────────────────────────────────────────────
-DATABASE_URL = "postgresql://postgres:password@localhost/gw2"   # ← ta DB locale
 BRANCH       = "raw-feed"
 SNAP_DIR     = pathlib.Path("snapshots")                        # dossier dans le dépôt
 # ─────────────────────────────────────────────────────────────────────────────
@@ -62,8 +68,6 @@ def ingest_file(path: pathlib.Path) -> None:
 
 
 def main() -> None:
-    # assure que models.py se connecte à la bonne DB
-    os.environ["DATABASE_URL"] = DATABASE_URL
 
     print("→ Mise à jour de la branche raw-feed …")
     ensure_branch_up_to_date()

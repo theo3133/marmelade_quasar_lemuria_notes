@@ -1,4 +1,10 @@
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+import os
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL n'est pas défini (ni dans .env, ni en variable d'environnement).")
 import time
 from models import Session, Item
 

@@ -2,6 +2,12 @@
 """Importe scraped_trends/*.json → tables items & daily_raw (ORM models.py)."""
 
 import argparse, json
+from dotenv import load_dotenv
+
+load_dotenv()
+import os
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL n'est pas défini (ni dans .env, ni en variable d'environnement).")
 from pathlib import Path
 from datetime import datetime
 from sqlalchemy.orm import Session
