@@ -1,0 +1,73 @@
+name: fetch_raw_to_git
+
+# ───── Déclencheurs ───────────────────────────────────────────────────────────
+on:
+  push:            # à chaque push sur main
+    branches: [ main ]
+  schedule:        # toutes les 2 h (UTC)
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+# ───── Permissions (push) ─────────────────────────────────────────────────────
+permissions:
+  contents: write
+
+# ───── Job principal ──────────────────────────────────────────────────────────
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1) Clone complet
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # 2) Python + deps
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: pip
+
+    - name: Install requirements
+      run: pip install -r requirements.txt
+
+    # 3) Génération du snapshot JSON  (retry ×3, back-off 4→8→16 s)
+    - name: Générer snapshot JSON (retry 3)
+      env:
+        TS: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
+        HTTP_TIMEOUT: 30               # lu par fetch_to_daily_raw.py (optionnel)
+      run: |
+        set -e
+        ATTEMPT=0
+        until [ "$ATTEMPT" -ge 3 ]; do
+          ATTEMPT=$((ATTEMPT+1))
+          echo "⏳  Tentative $ATTEMPT/3"
+          if python fetch_to_daily_raw.py --output buffer/${TS}.json; then
+            echo "✅  Snapshot généré"
+            break
+          fi
+          if [ "$ATTEMPT" -eq 3 ]; then
+            echo "❌  Échec après 3 tentatives" && exit 1
+          fi
+          sleep $((4 * ATTEMPT * ATTEMPT))   # 4s, 8s, 16s
+        done
+
+    # 4) Commit & push sur raw-feed (rebase pour éviter non fast-forward)
+    - name: Commit & push sur la branche raw-feed
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TS: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
+      run: |
+        git config user.name  "snapshot-bot"
+        git config user.email "snapshot@users.noreply.github.com"
+
+        git switch --create raw-feed || git switch raw-feed
+        git pull --rebase origin raw-feed || true
+
+        mkdir -p snapshots
+        mv buffer/*.json snapshots/
+
+        git add snapshots/*.json
+        git commit -m "snapshot ${TS}" || echo "rien à committer"
+        git push origin raw-feed
