@@ -32,11 +32,12 @@ jobs:
     - name: Install requirements
       run: pip install -r requirements.txt
 
-    # 3) Génération du snapshot JSON  (retry ×3, back-off 4→8→16 s)
+    # 3) Génération du snapshot JSON (retry ×3, back-off 4→8→16 s)
     - name: Générer snapshot JSON (retry 3)
       env:
         TS: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
-        HTTP_TIMEOUT: 30               # lu par fetch_to_daily_raw.py (optionnel)
+        HTTP_TIMEOUT: 30
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         set -e
         ATTEMPT=0
