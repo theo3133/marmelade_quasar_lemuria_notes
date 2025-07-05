@@ -1,0 +1,1 @@
+	gitignore<br># empêche toute fuite de secrets<br>.env<br>*.key<br>*.pem<br>config/*.json
