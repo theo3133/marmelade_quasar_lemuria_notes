@@ -1,29 +1,24 @@
 name: fetch_raw_to_git
 
-# ───── Déclencheurs ───────────────────────────────────────────────────────────
 on:
-  push:            # à chaque push sur main
+  push:
     branches: [ main ]
-  schedule:        # toutes les 2 h (UTC)
+  schedule:
     - cron: "17,32,47,2 * * * *"
   workflow_dispatch:
 
-# ───── Permissions (push) ─────────────────────────────────────────────────────
 permissions:
   contents: write
 
-# ───── Job principal ──────────────────────────────────────────────────────────
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
-    # 1) Clone complet
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # 2) Python + deps
     - uses: actions/setup-python@v5
       with:
         python-version: "3.12"
@@ -32,7 +27,6 @@ jobs:
     - name: Install requirements
       run: pip install -r requirements.txt
 
-    # 3) Génération du snapshot JSON (retry ×3, back-off 4→8→16 s)
     - name: Générer snapshot JSON (retry 3)
       env:
         TS: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
@@ -51,10 +45,9 @@ jobs:
           if [ "$ATTEMPT" -eq 3 ]; then
             echo "❌  Échec après 3 tentatives" && exit 1
           fi
-          sleep $((4 * ATTEMPT * ATTEMPT))   # 4s, 8s, 16s
+          sleep $((4 * ATTEMPT * ATTEMPT))
         done
 
-    # 4) Commit & push sur raw-feed (rebase pour éviter non fast-forward)
     - name: Commit & push sur la branche raw-feed
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,6 +62,8 @@ jobs:
         mkdir -p snapshots
         mv buffer/*.json snapshots/
 
-        git add snapshots/*.json
+        # 👇 Force l'ajout des fichiers JSON ignorés par .gitignore
+        git add -f snapshots/*.json
+
         git commit -m "snapshot ${TS}" || echo "rien à committer"
         git push origin raw-feed
