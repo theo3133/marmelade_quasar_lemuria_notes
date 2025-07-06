@@ -5,7 +5,7 @@ on:
   push:            # à chaque push sur main
     branches: [ main ]
   schedule:        # toutes les 2 h (UTC)
-    - cron: "0 */2 * * *"
+    - cron: "17,32,47,2 * * * *"
   workflow_dispatch:
 
 # ───── Permissions (push) ─────────────────────────────────────────────────────
